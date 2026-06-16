@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Dashboard | DIY Launcher</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0e14;
+            --card: #161b22;
+            --primary: #4f46e5;
+            --secondary: #ec4899;
+            --text: #f0f6fc;
+            --text-dim: #8b949e;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .header { text-align: center; margin-bottom: 3rem; }
+        .header h1 { 
+            font-size: 3rem; 
+            margin: 0; 
+            background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .launcher-card {
+            background: var(--card);
+            border-radius: 2rem;
+            padding: 3rem 2rem;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .launcher-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+        }
+
+        .icon {
+            font-size: 4rem;
+        }
+
+        .launcher-card h2 { margin: 0; font-size: 1.75rem; }
+        .launcher-card p { color: var(--text-dim); margin: 0; }
+
+        .badge {
+            font-size: 0.8rem;
+            background: rgba(255,255,255,0.05);
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .badge.secondary { color: var(--secondary); }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>DIY Stream Control</h1>
+        <p style="color: var(--text-dim)">Native WebRTC WHIP/WHEP Implementation</p>
+    </div>
+
+    <div class="grid">
+        <a href="broadcaster.html" class="launcher-card">
+            <div class="icon">📡</div>
+            <div class="badge">WHIP PROTOCOL</div>
+            <h2>Broadcaster</h2>
+            <p>Push your camera and microphone to the MediaMTX server.</p>
+        </a>
+
+        <a href="viewer.html" class="launcher-card">
+            <div class="icon">📺</div>
+            <div class="badge secondary">WHEP PROTOCOL</div>
+            <h2>Viewer</h2>
+            <p>Monitor and watch live streams from the MediaMTX server.</p>
+        </a>
+    </div>
+
+</body>
+</html>

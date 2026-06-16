@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WHIP Broadcaster | DIY</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0e14;
+            --card: #161b22;
+            --primary: #4f46e5;
+            --text: #f0f6fc;
+            --text-dim: #8b949e;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .header h1 { font-size: 1.5rem; margin: 0; color: #818cf8; }
+
+        .video-box {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 1rem;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        video { width: 100%; height: 100%; object-fit: cover; }
+
+        .controls { display: flex; gap: 1rem; }
+        .input-group {
+            flex-grow: 1;
+            background: #000;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        input { background: transparent; border: none; color: white; width: 100%; outline: none; }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .log {
+            margin-top: 1.5rem;
+            font-family: monospace;
+            font-size: 0.7rem;
+            background: #000;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            height: 80px;
+            overflow-y: auto;
+            color: #3fb950;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <h1>📡 Broadcaster</h1>
+            <span id="status" style="color: var(--text-dim); font-size: 0.8rem;">Disconnected</span>
+        </div>
+        <div class="video-box">
+            <video id="v" autoplay playsinline muted></video>
+        </div>
+        <div class="controls">
+            <div class="input-group">
+                <input type="text" id="path" value="cam1">
+            </div>
+            <button id="btn" class="btn">Broadcast</button>
+        </div>
+        <div id="log" class="log">> Ready to stream...</div>
+    </div>
+
+    <script>
+        let pc = null;
+        const log = (m) => { document.getElementById('log').innerHTML += `<br>> ${m}`; };
+
+        document.getElementById('btn').onclick = async () => {
+            if (pc) {
+                pc.close(); pc = null;
+                document.getElementById('btn').textContent = 'Broadcast';
+                document.getElementById('status').textContent = 'Disconnected';
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+                document.getElementById('v').srcObject = stream;
+
+                pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+                
+                stream.getTracks().forEach(t => {
+                    const transceiver = pc.addTransceiver(t, { direction: 'sendonly', streams: [stream] });
+                    
+                    // Force H.264 for the video track to minimize latency/transcoding in MediaMTX
+                    if (t.kind === 'video' && 'getCapabilities' in RTCRtpSender) {
+                        const codecs = RTCRtpSender.getCapabilities('video').codecs;
+                        const h264Codecs = codecs.filter(c => 
+                            c.mimeType === 'video/H264' && 
+                            c.sdpFmtpLine?.includes('packetization-mode=1') // Profile typical for low-latency
+                        );
+                        if (h264Codecs.length > 0) {
+                            transceiver.setCodecPreferences(h264Codecs);
+                        }
+                    }
+                });
+
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+
+                const res = await fetch(`http://localhost:8889/${document.getElementById('path').value}/whip`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/sdp' },
+                    body: pc.localDescription.sdp
+                });
+
+                if (!res.ok) throw new Error(res.status);
+                await pc.setRemoteDescription({ type: 'answer', sdp: await res.text() });
+                
+                document.getElementById('btn').textContent = 'Stop';
+                document.getElementById('status').textContent = 'Live';
+                log('Connection established.');
+            } catch (e) { log('Error: ' + e.message); }
+        };
+    </script>
+</body>
+</html>
