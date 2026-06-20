@@ -1,0 +1,14 @@
+api: yes
+apiAddress: :9997
+
+rtsp: yes
+rtmp: yes
+hls: yes
+webrtc: yes
+
+paths:
+  # The "all" configuration applies to any path requested that isn't explicitly defined
+  all:
+    # Pull from origin if the stream exists there
+    source: rtsp://origin:8554/%name%
+    sourceOnDemand: yes

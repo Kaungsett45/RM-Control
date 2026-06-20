@@ -1,0 +1,14 @@
+# This file contains baseline defaults.
+# Real credentials and security are managed via environment variables in docker-compose.yml.
+
+api: yes
+apiAddress: :9997
+
+rtsp: yes
+rtmp: yes
+hls: yes
+webrtc: yes
+
+paths:
+  all:
+    source: publisher
