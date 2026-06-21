@@ -1,0 +1,31 @@
+# MediaMTX v1.x Configuration
+
+# Standard protocols and API
+api: yes
+apiAddress: :9997
+rtsp: yes
+rtmp: yes
+hls: yes
+webrtc: yes
+
+# Global Recording Defaults (New syntax for v1.x)
+pathDefaults:
+  record: no
+  recordPath: /recordings/%path/%Y-%m-%d_%H-%M-%S
+  recordFormat: fmp4
+  recordSegmentDuration: 10m
+  recordDeleteAfter: 7d
+
+paths:
+  # Mode A: Continuous Recording
+  # Use regex for wildcard matching: ~^continuous/.*
+  "~^continuous/.*":
+    source: publisher
+    record: yes
+
+  # Mode B: On-Demand Recording
+  # Use regex for wildcard matching: ~^on-demand/.*
+  "~^on-demand/.*":
+    source: publisher
+    runOnRead: curl -X POST http://recorder:3000/start/%path
+    runOnUnread: curl -X POST http://recorder:3000/stop/%path
