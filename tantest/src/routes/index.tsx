@@ -5,7 +5,7 @@ import { JokeForm } from '#/components/JokeForm'
 
 export const Route = createFileRoute('/')({
   loader: async () => {
-    // Load jokes data when the route is accessed
+    // Load jokes data when the route is accessed 
     return getJokes()
   },
   component: Home,
