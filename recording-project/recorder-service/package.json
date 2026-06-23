@@ -1,0 +1,11 @@
+{
+  "name": "recorder-service",
+  "version": "1.0.0",
+  "description": "Manages on-demand recordings for MediaMTX",
+  "main": "index.js",
+  "dependencies": {
+    "express": "^4.18.2",
+    "morgan": "^1.10.0",
+    "fs-extra": "^11.1.1"
+  }
+}

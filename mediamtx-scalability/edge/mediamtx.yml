@@ -1,0 +1,14 @@
+api: yes
+apiAddress: :9997
+
+rtsp: yes
+rtmp: yes
+hls: yes
+webrtc: yes
+
+paths:
+  # Use a regex to match any path and proxy it from the origin server.
+  # $G1 captures the full path name from the incoming request.
+  "~^(.*)$":
+    source: rtsp://admin:admin@origin:8554/$G1
+    sourceOnDemand: yes

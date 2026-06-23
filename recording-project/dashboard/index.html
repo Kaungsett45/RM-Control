@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Rec - Dashboard</title>
+    <link href="https://vjs.zencdn.net/8.3.0/video-js.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --primary: #38bdf8;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 2rem;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        header {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #334155;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sidebar {
+            background: var(--card);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            overflow-y: auto;
+            border: 1px solid #334155;
+        }
+
+        .sidebar h2 {
+            font-size: 1.1rem;
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .record-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .record-item {
+            background: #0f172a80;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .record-item:hover {
+            border-color: var(--primary);
+            background: #0f172a;
+        }
+
+        .record-item.active {
+            border-color: var(--primary);
+            background: #38bdf810;
+        }
+
+        .record-item .name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: block;
+            margin-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .record-item .meta {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        .player-container {
+            background: var(--card);
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .video-wrapper {
+            flex: 1;
+            background: black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-js {
+            width: 100%;
+            height: 100%;
+        }
+
+        .player-info {
+            padding: 1.5rem;
+        }
+
+        .player-info h3 {
+            margin: 0 0 0.5rem 0;
+            color: var(--primary);
+        }
+
+        .empty-state {
+            color: var(--text-dim);
+            text-align: center;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Smart Recording Control</h1>
+        <div id="status" style="font-size: 0.8rem; color: #10b981;">● System Live</div>
+    </header>
+
+    <div class="sidebar">
+        <h2>Recordings</h2>
+        <div class="record-list" id="recordList">
+            <div class="empty-state">Loading recordings...</div>
+        </div>
+    </div>
+
+    <div class="player-container">
+        <div class="video-wrapper">
+            <video id="my-video" class="video-js vjs-big-play-centered" controls preload="auto" data-setup='{}'>
+                <p class="vjs-no-js">To view this video please enable JavaScript</p>
+            </video>
+        </div>
+        <div class="player-info">
+            <h3 id="playingName">Select a recording</h3>
+            <p id="playingMeta" style="color: var(--text-dim); font-size: 0.85rem;">Ready to playback</p>
+        </div>
+    </div>
+
+    <script src="https://vjs.zencdn.net/8.3.0/video.min.js"></script>
+    <script>
+        const recordList = document.getElementById('recordList');
+        const playingName = document.getElementById('playingName');
+        const playingMeta = document.getElementById('playingMeta');
+        let player = videojs('my-video');
+
+        async function fetchRecordings() {
+            try {
+                const res = await fetch('/api/list');
+                const data = await res.json();
+                
+                if (data.length === 0) {
+                    recordList.innerHTML = '<div class="empty-state">No recordings found.</div>';
+                    return;
+                }
+
+                recordList.innerHTML = '';
+                data.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'record-item';
+                    div.innerHTML = `
+                        <span class="name" title="${item.path}">${item.path}</span>
+                        <span class="meta">${new Date(item.date).toLocaleString()} | ${(item.size / 1024 / 1024).toFixed(2)} MB</span>
+                    `;
+                    div.onclick = () => playVideo(item);
+                    recordList.appendChild(div);
+                });
+            } catch (err) {
+                recordList.innerHTML = '<div class="empty-state">Error loading recordings.</div>';
+            }
+        }
+
+        function playVideo(item) {
+            document.querySelectorAll('.record-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            playingName.innerText = item.path;
+            playingMeta.innerText = `Recorded on ${new Date(item.date).toLocaleString()}`;
+            
+            // We'll serve files via the recorder service
+            player.src({
+                src: `/api/files${item.path}`,
+                type: 'video/mp4'
+            });
+            player.play();
+        }
+
+        setInterval(fetchRecordings, 10000);
+        fetchRecordings();
+    </script>
+</body>
+</html>

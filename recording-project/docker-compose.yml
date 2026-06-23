@@ -1,0 +1,31 @@
+
+services:
+  mediamtx:
+    build:
+      context: .
+      dockerfile: mediamtx.Dockerfile
+    container_name: mediamtx
+    ports:
+      - "8554:8554"   # RTSP
+      - "1935:1935"   # RTMP
+      - "8888:8888"   # HLS
+      - "8889:8889"   # WebRTC
+      - "9997:9997"   # API
+    volumes:
+      - ./recordings:/recordings
+      - ./mediamtx.yml:/mediamtx.yml
+    restart: unless-stopped
+
+  recorder:
+    build: ./recorder-service
+    container_name: recorder
+    ports:
+      - "3000:3000"   # Recorder API & Dashboard
+    volumes:
+      - ./recordings:/recordings
+      - ./dashboard:/app/dashboard
+    depends_on:
+      - mediamtx
+    restart: unless-stopped
+
+# Removed named volume section to use local folders instead
