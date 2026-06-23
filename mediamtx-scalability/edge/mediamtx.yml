@@ -7,8 +7,8 @@ hls: yes
 webrtc: yes
 
 paths:
-  # The "all" configuration applies to any path requested that isn't explicitly defined
-  all:
-    # Pull from origin if the stream exists there
-    source: rtsp://origin:8554/%name%
+  # Use a regex to match any path and proxy it from the origin server.
+  # $G1 captures the full path name from the incoming request.
+  "~^(.*)$":
+    source: rtsp://admin:admin@origin:8554/$G1
     sourceOnDemand: yes

@@ -1,16 +1,14 @@
-version: '3.8'
-
 services:
+
+  # ── ORIGIN: Pure ingest + routing ──────────────────────────────────────────
+  # Cameras push here. Hooks fire to recording-api when streams start/stop.
   origin:
-    image: bluenviron/mediamtx:latest
+    build: ./origin
     container_name: mediamtx-origin
     ports:
-      - "1935:1935"
-      - "8554:8554"
-      - "8888:8888"
-      - "9997:9997"
+      - "1935:1935"   # RTMP ingest  (cameras / OBS push here)
+      - "8888:8888"   # HLS live view
     environment:
-      # These variables override settings in mediamtx.yml
       - MTX_AUTHMETHOD=internal
       - MTX_AUTHINTERNALUSERS_0_USER=${MTX_ADMIN_USER}
       - MTX_AUTHINTERNALUSERS_0_PASS=${MTX_ADMIN_PASS}
@@ -19,33 +17,76 @@ services:
       - MTX_AUTHINTERNALUSERS_0_PERMISSIONS_2_ACTION=publish
     volumes:
       - ./origin/mediamtx.yml:/mediamtx.yml
+      - ./origin/hooks:/hooks       # runOnReady / runOnNotReady scripts
     networks:
       - media-net
 
+  # ── EDGE VIEWERS: Pull from origin on demand for live viewing ──────────────
   edge-1:
     image: bluenviron/mediamtx:latest
     container_name: mediamtx-edge-1
     ports:
       - "8889:8888"
-    environment:
-      - MTX_PATHS_ALL_SOURCE=rtsp://${MTX_ADMIN_USER}:${MTX_ADMIN_PASS}@origin:8554/%name%
+    environment: []
     volumes:
       - ./edge/mediamtx.yml:/mediamtx.yml
     networks:
       - media-net
 
-  edge-2:
-    image: bluenviron/mediamtx:latest
-    container_name: mediamtx-edge-2
-    ports:
-      - "8890:8888"
+
+  # ── NVR: Dedicated recording node ──────────────────────────────────────────
+  # Pulls paths from origin via RTSP. Records fMP4 segments.
+  # Paths are added/removed dynamically by recording-api.
+  nvr:
+    build: ./nvr
+    container_name: mediamtx-nvr
     environment:
-      - MTX_PATHS_ALL_SOURCE=rtsp://${MTX_ADMIN_USER}:${MTX_ADMIN_PASS}@origin:8554/%name%
+      - MTX_AUTHMETHOD=internal
+      - MTX_AUTHINTERNALUSERS_0_USER=${MTX_ADMIN_USER}
+      - MTX_AUTHINTERNALUSERS_0_PASS=${MTX_ADMIN_PASS}
+      - MTX_AUTHINTERNALUSERS_0_PERMISSIONS_0_ACTION=api
+      - MTX_AUTHINTERNALUSERS_0_PERMISSIONS_1_ACTION=read
+      - MTX_AUTHINTERNALUSERS_0_PERMISSIONS_2_ACTION=playback
     volumes:
-      - ./edge/mediamtx.yml:/mediamtx.yml
+      - ./nvr/mediamtx.yml:/mediamtx.yml
+      - ./nvr/hooks:/hooks              # runOnRecordSegmentComplete script
+      - recordings_data:/recordings     # shared volume: NVR writes, dashboard reads
+    networks:
+      - media-net
+    depends_on:
+      - origin
+
+  # ── MONGODB: Session + segment metadata ────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    restart: unless-stopped
+    volumes:
+      - mongodb_data:/data/db
     networks:
       - media-net
 
+  # ── RECORDING API: Orchestrates sessions & segments ────────────────────────
+  # Called by origin hooks → opens sessions + adds NVR paths
+  # Called by NVR hooks   → saves segment metadata to MongoDB
+  recording-api:
+    build: ./recording-api
+    container_name: recording-api
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/nvr
+      - NVR_API_URL=http://nvr:9997
+      - RECORDINGS_DIR=/recordings
+      - MTX_ADMIN_USER=${MTX_ADMIN_USER}
+      - MTX_ADMIN_PASS=${MTX_ADMIN_PASS}
+    volumes:
+      - recordings_data:/recordings:ro  # read-only: only for file size stats
+    networks:
+      - media-net
+    depends_on:
+      - mongodb
+      - nvr
+
+  # ── API MANAGER: Path CRUD (original service, kept alongside) ──────────────
   api-manager:
     build: ./api-manager
     container_name: api-manager
@@ -58,6 +99,31 @@ services:
     networks:
       - media-net
 
+  # ── REPLAY DASHBOARD: Session timeline + video playback ───────────────────
+  replay-dashboard:
+    build: ./replay-dashboard
+    container_name: replay-dashboard
+    ports:
+      - "4000:4000"
+    environment:
+      - RECORDING_API_URL=http://recording-api:5000
+      - NVR_PLAYBACK_URL=http://nvr:9996
+      - MTX_ADMIN_USER=${MTX_ADMIN_USER}
+      - MTX_ADMIN_PASS=${MTX_ADMIN_PASS}
+    volumes:
+      - recordings_data:/recordings:ro
+    networks:
+      - media-net
+    depends_on:
+      - recording-api
+      - nvr
+
 networks:
   media-net:
     driver: bridge
+
+volumes:
+  recordings_data:
+    driver: local          # fMP4 segments (48h auto-delete configured in NVR)
+  mongodb_data:
+    driver: local          # session + segment metadata

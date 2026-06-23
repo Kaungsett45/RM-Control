@@ -1,13 +1,25 @@
-# This file contains baseline defaults.
-# Real credentials and security are managed via environment variables in docker-compose.yml.
+# Origin MediaMTX — pure ingest + routing node
+# Purpose: accepts camera/OBS pushes, routes to NVR and edges.
+# Does NOT record — that is the NVR's responsibility.
 
 api: yes
 apiAddress: :9997
+
+# No playback server on origin — NVR handles replay
+playback: no
 
 rtsp: yes
 rtmp: yes
 hls: yes
 webrtc: yes
+
+# ── Path defaults ─────────────────────────────────────────────────────────────
+pathDefaults:
+  # Notify recording-api when a stream goes live (triggers NVR recording)
+  runOnReady: sh /hooks/on_ready.sh
+
+  # Notify recording-api when a stream goes offline (stops NVR recording)
+  runOnNotReady: sh /hooks/on_not_ready.sh
 
 paths:
   all:

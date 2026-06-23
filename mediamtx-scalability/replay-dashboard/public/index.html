@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NVR — Replay Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ══ TOPBAR ══ -->
+  <header class="topbar">
+    <div class="topbar-logo">
+      <div class="logo-icon">📹</div>
+      <div>
+        <h1>NVR Replay</h1>
+        <span>MediaMTX Recording System</span>
+      </div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div id="activeBadge" class="badge badge-recording" style="display:none">
+      <div class="dot"></div><span id="activeCount">0</span> recording
+    </div>
+    <button class="btn" onclick="App.refresh()">⟳ Refresh</button>
+  </header>
+
+  <div class="workspace">
+    <!-- ══ SIDEBAR: Cameras ══ -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2>Cameras</h2>
+        <span class="spinner" id="sidebarSpinner" style="display:none"></span>
+      </div>
+      <div id="cameraList" class="camera-list">
+        <!-- Populated by ui.js -->
+      </div>
+    </aside>
+
+    <!-- ══ SESSIONS PANE ══ -->
+    <div class="sessions-pane" id="sessionsPane">
+      <div class="pane-header">
+        <h2 id="paneTitle">Select a camera</h2>
+        <button id="btnWatchLive" class="btn" style="display:none; background: var(--red); color: white; border:none; margin-right: 15px; box-shadow: 0 0 10px rgba(239,68,68,0.4);" onclick="Player.playLive()">⏺ Watch Live</button>
+        <div id="paneFilters" style="display:none">
+          <select id="statusFilter" class="select-sm" onchange="App.applyFilter()">
+            <option value="">All sessions</option>
+            <option value="recording">Recording</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+      </div>
+      <div id="sessionList" class="session-list">
+        <div class="empty-pane">
+          <div class="ep-icon">🎥</div>
+          <p>Select a camera to browse its recording sessions.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PLAYER PANEL ══ -->
+    <div class="player-panel">
+      <div class="video-wrap">
+        <div id="videoIdle" class="video-idle">
+          <div class="idle-icon">▶</div>
+          <p>Click a segment on the timeline to play it</p>
+        </div>
+        <video id="player" controls preload="metadata" style="display:none"></video>
+        <iframe id="livePlayer" style="display:none; width: 100%; height: 100%; border: none;"></iframe>
+      </div>
+
+      <div class="info-panel">
+        <div class="info-header">Now Playing</div>
+        <div id="infoBody" class="info-body">
+          <div class="info-idle">No segment selected.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<!-- JS (load order matters: utils → state → api → ui → player → app) -->
+<script src="js/utils.js"></script>
+<script src="js/state.js"></script>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/player.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

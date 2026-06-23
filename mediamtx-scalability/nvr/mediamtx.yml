@@ -1,0 +1,36 @@
+# NVR MediaMTX — dedicated recording node
+# Purpose: pulls from origin, records to disk, serves playback.
+# Does NOT accept direct RTMP/SRT pushes — only origin feeds it via RTSP.
+
+api: yes
+apiAddress: :9997
+
+# Built-in playback server — serves recorded fMP4 segments for replay
+playback: yes
+playbackAddress: :9996
+
+# Only RTSP enabled (pulling from origin)
+rtsp: yes
+rtmp: no
+hls: no
+webrtc: no
+srt: no
+
+# ── Recording defaults (applied to every path added via API) ──────────────────
+pathDefaults:
+  # Recording
+  record: yes
+  recordPath: /recordings/%path/%Y-%m-%d_%H-%M-%S-%f
+  recordFormat: fmp4
+  recordSegmentDuration: 1m
+  # 2-day auto-delete — old segments removed automatically
+  recordDeleteAfter: 48h
+
+  # Hook: fires when a segment file is finished
+  # Saves metadata (size, duration, timestamps) into MongoDB via recording-api
+  runOnRecordSegmentComplete: sh /hooks/on_segment_complete.sh
+
+paths:
+  # No static paths defined here.
+  # Paths are added dynamically by recording-api when cameras go live.
+  # Example added path: { source: "rtsp://origin:8554/cam1", sourceOnDemand: false }
